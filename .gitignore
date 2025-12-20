@@ -1,0 +1,31 @@
+# Compiled files
+target/
+bin/
+*.class
+
+# Dependencies
+lib/
+
+# IDE files
+.vscode/
+.idea/
+*.iml
+.settings/
+.project
+.classpath
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Database
+*.db
+
+# Maven wrapper
+.mvn/
+
+# Temporary files
+sources.txt
