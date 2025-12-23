@@ -3,8 +3,8 @@ target/
 bin/
 *.class
 
-# Dependencies
-lib/
+# Dependencies (downloaded by run.ps1)
+lib/*.jar
 
 # IDE files
 .vscode/
@@ -29,3 +29,8 @@ Thumbs.db
 
 # Temporary files
 sources.txt
+test_output.txt
+test_results.txt
+
+# Keep lib directory structure
+!lib/.gitkeep

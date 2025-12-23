@@ -113,10 +113,19 @@ function displayRecentProjects(projects) {
         const completion = taskCount > 0 ? (completedCount / taskCount * 100) : 0;
         
         html += `
-            <div class="task-item" onclick="viewProjectDetails(${project.id})">
+            <div class="task-item project-clickable" onclick="viewProjectDetails(${project.id})" title="Click to view project details">
                 <div class="task-info">
-                    <h4>${project.name}</h4>
-                    <p>${taskCount} task${taskCount !== 1 ? 's' : ''} • ${completion.toFixed(0)}% complete</p>
+                    <h4>
+                        <i class="fas fa-folder-open" style="margin-right: 0.5rem; color: var(--primary-color);"></i>
+                        ${project.name}
+                        <i class="fas fa-external-link-alt project-click-icon"></i>
+                    </h4>
+                    <p>
+                        <i class="fas fa-tasks" style="margin-right: 0.25rem;"></i>
+                        ${taskCount} task${taskCount !== 1 ? 's' : ''} • 
+                        <i class="fas fa-chart-line" style="margin-left: 0.5rem; margin-right: 0.25rem;"></i>
+                        ${completion.toFixed(0)}% complete
+                    </p>
                 </div>
                 <span class="status-badge ${project.status.toLowerCase().replace('_', '-')}">${project.status}</span>
             </div>
@@ -140,15 +149,27 @@ function displayWorkloadOverview(memberWorkloads) {
     memberWorkloads.forEach(member => {
         const percentage = member.workloadPercentage || 0;
         const progressClass = percentage > 100 ? 'danger' : percentage > 80 ? 'warning' : '';
+        const itemClass = percentage > 100 ? 'overloaded' : percentage > 80 ? 'warning' : '';
+        const statusIcon = percentage > 100 ? '<i class="fas fa-exclamation-circle" style="color: #dc2626; margin-left: 0.5rem;"></i>' : 
+                          percentage > 80 ? '<i class="fas fa-exclamation-triangle" style="color: #d97706; margin-left: 0.5rem;"></i>' : 
+                          '<i class="fas fa-check-circle" style="color: #10b981; margin-left: 0.5rem;"></i>';
         
         html += `
-            <div class="workload-item">
+            <div class="workload-item ${itemClass}">
                 <div class="workload-header">
-                    <span>${member.name}</span>
-                    <span class="workload-percentage">${member.currentWorkload.toFixed(1)}h / ${member.weeklyAvailability}h</span>
+                    <span>
+                        <i class="fas fa-user" style="margin-right: 0.5rem; color: var(--primary-color);"></i>
+                        ${member.name}
+                        ${statusIcon}
+                    </span>
+                    <span class="workload-percentage">
+                        ${member.currentWorkload.toFixed(1)}h / ${member.weeklyAvailability}h
+                    </span>
                 </div>
                 <div class="progress-bar">
-                    <div class="progress-fill ${progressClass}" style="width: ${Math.min(percentage, 100)}%"></div>
+                    <div class="progress-fill ${progressClass}" style="width: ${Math.min(percentage, 100)}%">
+                        <span class="progress-text">${percentage.toFixed(0)}%</span>
+                    </div>
                 </div>
             </div>
         `;
@@ -669,7 +690,21 @@ async function loadStatistics() {
         displayWorkloadStatistics(workloadStats);
         
         const projects = await ProjectsAPI.getAll();
-        displayProjectStatistics(projects);
+        
+        // Charger les tâches pour chaque projet
+        const projectsWithTasks = await Promise.all(
+            projects.map(async (project) => {
+                try {
+                    const tasks = await ProjectsAPI.getTasks(project.id);
+                    return { ...project, tasks };
+                } catch (error) {
+                    console.error(`Error loading tasks for project ${project.id}:`, error);
+                    return { ...project, tasks: [] };
+                }
+            })
+        );
+        
+        displayProjectStatistics(projectsWithTasks);
     } catch (error) {
         console.error('Error loading statistics:', error);
     }

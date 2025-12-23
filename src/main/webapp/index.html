@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Project Management Platform</title>
+    <title>Project Management Platform - Professional Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -32,8 +35,15 @@
         <!-- Dashboard Page -->
         <div id="dashboard" class="page active">
             <div class="page-header">
-                <h1>Dashboard</h1>
-                <p>Overview of your project management platform</p>
+                <div>
+                    <h1>✨ Dashboard</h1>
+                    <p>Overview of your project management platform</p>
+                </div>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <span style="color: var(--text-secondary); font-size: 0.875rem;">
+                        <i class="fas fa-clock"></i> Last updated: <span id="lastUpdate">just now</span>
+                    </span>
+                </div>
             </div>
             
             <div class="stats-grid">
