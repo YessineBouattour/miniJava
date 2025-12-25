@@ -822,10 +822,6 @@ async function loadStatistics() {
         
         const projects = await ProjectsAPI.getAll();
         
-<<<<<<< HEAD
-=======
-        // Charger les tâches pour chaque projet
->>>>>>> 47aa7be65ffd6a4e7ebd2f3aecc36049a38a2f3b
         const projectsWithTasks = await Promise.all(
             projects.map(async (project) => {
                 try {
