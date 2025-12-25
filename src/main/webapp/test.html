@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test API</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        .success { color: green; }
+        .error { color: red; }
+        pre { background: #f4f4f4; padding: 10px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>Test API</h1>
+    <button onclick="testAll()">Tester toutes les APIs</button>
+    <div id="results"></div>
+
+    <script>
+        async function testAll() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<h2>Tests en cours...</h2>';
+            
+            let html = '';
+            
+            // Test Members
+            try {
+                const response = await fetch('/api/members/');
+                const members = await response.json();
+                html += `<div class="success">✓ Members API: ${members.length} membres</div>`;
+                html += `<pre>${JSON.stringify(members.slice(0, 2), null, 2)}</pre>`;
+            } catch (e) {
+                html += `<div class="error">✗ Members API: ${e.message}</div>`;
+            }
+            
+            // Test Projects
+            try {
+                const response = await fetch('/api/projects/');
+                const projects = await response.json();
+                html += `<div class="success">✓ Projects API: ${projects.length} projets</div>`;
+                html += `<pre>${JSON.stringify(projects.slice(0, 1), null, 2)}</pre>`;
+            } catch (e) {
+                html += `<div class="error">✗ Projects API: ${e.message}</div>`;
+            }
+            
+            // Test Statistics
+            try {
+                const response = await fetch('/api/statistics/');
+                const stats = await response.json();
+                html += `<div class="success">✓ Statistics API</div>`;
+                html += `<pre>${JSON.stringify(stats, null, 2)}</pre>`;
+            } catch (e) {
+                html += `<div class="error">✗ Statistics API: ${e.message}</div>`;
+            }
+            
+            // Test Workload
+            try {
+                const response = await fetch('/api/statistics/workload');
+                const workload = await response.json();
+                html += `<div class="success">✓ Workload API: ${workload.memberWorkloads.length} membres</div>`;
+                html += `<pre>${JSON.stringify(workload, null, 2).substring(0, 500)}...</pre>`;
+            } catch (e) {
+                html += `<div class="error">✗ Workload API: ${e.message}</div>`;
+            }
+            
+            results.innerHTML = html;
+        }
+    </script>
+</body>
+</html>
