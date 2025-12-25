@@ -113,7 +113,7 @@ function displayRecentProjects(projects) {
         const completion = taskCount > 0 ? (completedCount / taskCount * 100) : 0;
         
         html += `
-            <div class="task-item" onclick="viewProjectDetails(${project.id})">
+            <div class="task-item project-clickable" onclick="viewProjectDetails(${project.id})" title="Click to view project details">
                 <div class="task-info">
                     <h4>${project.name} <i class="fas fa-arrow-right" style="font-size: 0.8rem; color: #999; margin-left: 0.5rem;"></i></h4>
                     <p>${taskCount} task${taskCount !== 1 ? 's' : ''} • ${completion.toFixed(0)}% complete</p>
@@ -138,7 +138,6 @@ function displayWorkloadOverview(memberWorkloads) {
     let html = '';
     // Afficher TOUS les membres (pas seulement les 5 premiers)
     memberWorkloads.forEach(member => {
-        // Calculer le pourcentage si non fourni
         let percentage = member.workloadPercentage || 0;
         if (percentage === 0 && member.weeklyAvailability > 0) {
             percentage = (member.currentWorkload / member.weeklyAvailability) * 100;
@@ -146,15 +145,15 @@ function displayWorkloadOverview(memberWorkloads) {
         
         let progressClass = '';
         if (percentage > 100) {
-            progressClass = 'danger'; // Rouge - Surchargé
+            progressClass = 'danger';
         } else if (percentage >= 90) {
-            progressClass = 'warning'; // Orange - Presque surchargé
+            progressClass = 'warning';
         } else if (percentage >= 75) {
-            progressClass = 'high'; // Jaune - Charge élevée
+            progressClass = 'high';
         } else if (percentage >= 50) {
-            progressClass = 'normal'; // Vert - Charge normale
+            progressClass = 'normal';
         } else {
-            progressClass = 'low'; // Bleu - Charge légère
+            progressClass = 'low';
         }
         
         html += `
@@ -823,6 +822,10 @@ async function loadStatistics() {
         
         const projects = await ProjectsAPI.getAll();
         
+<<<<<<< HEAD
+=======
+        // Charger les tâches pour chaque projet
+>>>>>>> 47aa7be65ffd6a4e7ebd2f3aecc36049a38a2f3b
         const projectsWithTasks = await Promise.all(
             projects.map(async (project) => {
                 try {
