@@ -134,10 +134,10 @@ public class TestValidationUtils {
             int skillMismatch = 0;
             for (Task task : tasks) {
                 if (task.isAssigned()) {
-                    Member member = memberDAO.findById(task.getAssignedMemberId());
+                    Member member = memberDAO.findById(task.getAssignedMember().getId());
                     if (member != null) {
                         for (TaskSkill reqSkill : task.getRequiredSkills()) {
-                            if (!member.hasSkill(reqSkill.getSkillId(), reqSkill.getRequiredLevel())) {
+                            if (!member.hasSkill(reqSkill.getSkill(), reqSkill.getRequiredLevel())) {
                                 skillMismatch++;
                             }
                         }

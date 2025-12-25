@@ -11,21 +11,12 @@ import java.sql.SQLException;
 import java.util.*;
 import java.util.stream.Collectors;
 
-/**
- * Intelligent Task Allocation Algorithm
- * Uses a heuristic approach combining multiple factors:
- * - Skills matching
- * - Workload balancing
- * - Priority and deadlines
- * - Task dependencies
- */
 public class TaskAllocationService {
     private static final Logger logger = LoggerFactory.getLogger(TaskAllocationService.class);
     
     /**
      * Seuil minimum de compétence requis pour affecter une tâche
      * - 0.6 = Compétences moyennes à bonnes requises (60%)
-     * 
      * Ce seuil garantit qu'on n'affecte pas de tâches à des personnes non compétentes
      */
     private static final double MINIMUM_COMPETENCE_THRESHOLD = 0.6;
@@ -46,16 +37,12 @@ public class TaskAllocationService {
         this.alertDAO = new AlertDAO();
     }
 
-    /**
-     * Main allocation method - assigns all unassigned tasks and rebalances TODO tasks
-     */
     public AllocationResult allocateTasks(int projectId) throws SQLException {
         logger.info("Starting task allocation for project: {}", projectId);
         
-        // Get all unassigned tasks
         List<Task> unassignedTasks = taskDAO.findUnassignedByProject(projectId);
         
-        // NOUVEAU: Aussi récupérer les tâches TODO assignées à des membres surchargés
+        // Récupérer les tâches TODO assignées à des membres surchargés
         List<Task> todoTasksFromOverloadedMembers = taskDAO.findByProjectAndStatus(projectId, Task.TaskStatus.TODO);
         List<Member> availableMembers = memberDAO.findAll();
         
@@ -64,30 +51,30 @@ public class TaskAllocationService {
             return new AllocationResult(0, unassignedTasks.size(), "No available members");
         }
         
+        logger.info("Checking for existing overloaded members before allocation");
+        checkExistingOverloads(projectId);
+        
         int assignedCount = 0;
         int failedCount = 0;
         int rebalancedCount = 0;
         
-        // PHASE 1: Rééquilibrer les tâches TODO des membres surchargés
         logger.info("Phase 1: Rebalancing TODO tasks from overloaded members");
         logger.info("Found {} TODO tasks to evaluate for rebalancing", todoTasksFromOverloadedMembers.size());
         
         for (Task task : todoTasksFromOverloadedMembers) {
-            if (task.getAssignedMemberId() == null) continue; // Déjà non assignée
+            if (task.getAssignedMember() == null) continue;
             
             try {
-                Member currentMember = memberDAO.findById(task.getAssignedMemberId());
+                Member currentMember = memberDAO.findById(task.getAssignedMember().getId());
                 logger.info("Evaluating task '{}' assigned to '{}' ({}%)", 
                     task.getTitle(), currentMember.getName(), 
                     String.format("%.1f", currentMember.getWorkloadPercentage()));
                 
-                // Si le membre actuel est surchargé (>100%), chercher quelqu'un de mieux
                 if (currentMember.getWorkloadPercentage() > 100) {
                     logger.info("Member is overloaded, searching for better member...");
                     Member betterMember = findBetterMember(task, availableMembers, currentMember);
                     
                     if (betterMember != null && betterMember.getId() != currentMember.getId()) {
-                        // Réassigner la tâche
                         logger.info("Rebalancing task '{}' from '{}' ({}%) to '{}' ({}%)", 
                             task.getTitle(), 
                             currentMember.getName(), 
@@ -95,11 +82,9 @@ public class TaskAllocationService {
                             betterMember.getName(),
                             String.format("%.1f", betterMember.getWorkloadPercentage()));
                         
-                        // Retirer de l'ancien membre
                         currentMember.setCurrentWorkload(currentMember.getCurrentWorkload() - task.getEstimatedHours());
                         memberDAO.updateWorkload(currentMember.getId(), currentMember.getCurrentWorkload());
                         
-                        // Assigner au nouveau membre
                         assignTaskToMember(task, betterMember);
                         betterMember.setCurrentWorkload(betterMember.getCurrentWorkload() + task.getEstimatedHours());
                         memberDAO.updateWorkload(betterMember.getId(), betterMember.getCurrentWorkload());
@@ -112,13 +97,10 @@ public class TaskAllocationService {
             }
         }
         
-        // PHASE 2: Assigner les tâches non assignées
         logger.info("Phase 2: Assigning unassigned tasks");
         if (!unassignedTasks.isEmpty()) {
-            // Sort tasks by priority and deadline
             List<Task> sortedTasks = prioritizeTasks(unassignedTasks);
             
-            // Allocate each task
             for (Task task : sortedTasks) {
                 try {
                     Member bestMember = findBestMember(task, availableMembers);
@@ -126,7 +108,6 @@ public class TaskAllocationService {
                     if (bestMember != null) {
                         assignTaskToMember(task, bestMember);
                         
-                        // Update member workload
                         bestMember.setCurrentWorkload(
                             bestMember.getCurrentWorkload() + task.getEstimatedHours()
                         );
@@ -135,7 +116,6 @@ public class TaskAllocationService {
                         assignedCount++;
                         logger.info("Assigned task '{}' to member '{}'", task.getTitle(), bestMember.getName());
                         
-                        // Check for overload
                         if (bestMember.isOverloaded()) {
                             createOverloadAlert(bestMember, task);
                         }
@@ -158,12 +138,6 @@ public class TaskAllocationService {
         return new AllocationResult(assignedCount + rebalancedCount, failedCount, message);
     }
     
-    /**
-     * Find a better member for a task than the current one
-     * Stratégie en 2 phases :
-     * 1. Chercher le meilleur score parmi ceux qui ne seront PAS surchargés (< 100%)
-     * 2. Si tous seront surchargés, choisir celui avec la surcharge minimale
-     */
     private Member findBetterMember(Task task, List<Member> members, Member currentMember) {
         double currentFinalWorkload = (currentMember.getCurrentWorkload() / currentMember.getWeeklyAvailability()) * 100;
         
@@ -171,25 +145,21 @@ public class TaskAllocationService {
             currentMember.getName(), 
             String.format("%.1f", currentMember.getWorkloadPercentage()));
         
-        // Calculer les scores et charges finales pour tous les candidats qualifiés
         List<CandidateEvaluation> candidates = new ArrayList<>();
         
         for (Member member : members) {
-            // Ne pas reconsidérer le membre actuel
             if (member.getId() == currentMember.getId()) {
                 continue;
             }
             
             double score = calculateMemberScore(task, member);
             
-            // Si le membre n'a pas les compétences requises (seuil pour rééquilibrage)
             if (score < REBALANCING_COMPETENCE_THRESHOLD) {
                 logger.debug("Skipping '{}' - insufficient score ({:.3f} < {:.2f})", 
                     member.getName(), score, REBALANCING_COMPETENCE_THRESHOLD);
                 continue;
             }
             
-            // Calculer la charge finale après affectation
             double newWorkload = member.getCurrentWorkload() + task.getEstimatedHours();
             double finalWorkloadPct = (newWorkload / member.getWeeklyAvailability()) * 100;
             
@@ -206,10 +176,9 @@ public class TaskAllocationService {
             return null;
         }
         
-        // PHASE 1 : Chercher le meilleur score parmi ceux qui ne seront PAS surchargés (< 100%)
         Member bestWithoutOverload = candidates.stream()
             .filter(c -> c.finalWorkloadPct < 100.0)
-            .sorted((c1, c2) -> Double.compare(c2.score, c1.score)) // Trier par score décroissant
+            .sorted((c1, c2) -> Double.compare(c2.score, c1.score))
             .map(c -> c.member)
             .findFirst()
             .orElse(null);
@@ -223,7 +192,6 @@ public class TaskAllocationService {
             logger.info("PHASE 1 SUCCESS: Selected '{}' (score={:.3f}, final={}%) - NO overload!", 
                 selected.member.getName(), selected.score, String.format("%.1f", selected.finalWorkloadPct));
             
-            // Vérifier que c'est mieux que le membre actuel
             if (selected.finalWorkloadPct < currentFinalWorkload) {
                 return bestWithoutOverload;
             }
@@ -249,9 +217,6 @@ public class TaskAllocationService {
         return null;
     }
     
-    /**
-     * Classe interne pour évaluer les candidats
-     */
     private static class CandidateEvaluation {
         Member member;
         double score;
@@ -264,10 +229,6 @@ public class TaskAllocationService {
         }
     }
 
-    /**
-     * Find the best member for a task using scoring algorithm
-     * Pour l'affectation initiale, on exige un seuil de compétence plus élevé
-     */
     private Member findBestMember(Task task, List<Member> members) {
         Member bestMember = null;
         double bestScore = -1;
@@ -275,7 +236,6 @@ public class TaskAllocationService {
         for (Member member : members) {
             double score = calculateMemberScore(task, member);
             
-            // Pour l'affectation initiale, on est plus strict sur les compétences
             if (score >= MINIMUM_COMPETENCE_THRESHOLD && score > bestScore) {
                 bestScore = score;
                 bestMember = member;
@@ -293,40 +253,25 @@ public class TaskAllocationService {
         return bestMember;
     }
 
-    /**
-     * Calculate a score for how suitable a member is for a task
-     * Score components:
-     * - Skill match (50%) - doit avoir les compétences requises
-     * - Workload après affectation (40%) - minimiser la surcharge finale
-     * - Priority bonus (10%)
-     */
     private double calculateMemberScore(Task task, Member member) {
         double skillScore = calculateSkillScore(task, member);
-        double priorityBonus = task.getPriorityScore() * 0.025; // 0-0.1
+        double priorityBonus = task.getPriorityScore() * 0.025;
         
-        // If member doesn't have required skills, return 0
         if (skillScore == 0) {
             return 0;
         }
         
-        // Calculer la charge APRÈS affectation de la tâche
         double newWorkload = member.getCurrentWorkload() + task.getEstimatedHours();
         double newWorkloadPercentage = (newWorkload / member.getWeeklyAvailability()) * 100;
         
-        // Score basé sur la surcharge finale (favorise la charge la plus faible)
-        // Plus la surcharge finale est faible, meilleur est le score
         double workloadScore;
         if (newWorkloadPercentage <= 100) {
-            // Pas de surcharge : excellent score (0.8 à 1.0)
             workloadScore = 1.0 - (newWorkloadPercentage / 100.0 * 0.2);
         } else {
-            // Surcharge : score diminue avec l'augmentation de la surcharge
-            // 100% = 0.8, 150% = 0.4, 200% = 0.0
             double overload = newWorkloadPercentage - 100;
             workloadScore = Math.max(0, 0.8 - (overload / 100.0 * 0.8));
         }
         
-        // Weighted combination - privilégier les compétences et la minimisation de surcharge
         double totalScore = (skillScore * 0.5) + 
                            (workloadScore * 0.4) + 
                            priorityBonus;
@@ -337,14 +282,11 @@ public class TaskAllocationService {
         return totalScore;
     }
 
-    /**
-     * Calculate skill matching score (0-1)
-     */
     private double calculateSkillScore(Task task, Member member) {
         List<TaskSkill> requiredSkills = task.getRequiredSkills();
         
         if (requiredSkills.isEmpty()) {
-            return 0.5; // Neutral score if no skills required
+            return 0.5;
         }
         
         int matchedSkills = 0;
@@ -354,9 +296,8 @@ public class TaskAllocationService {
         for (TaskSkill taskSkill : requiredSkills) {
             maxSkillLevel += taskSkill.getRequiredLevel();
             
-            // Check if member has this skill
             Optional<MemberSkill> memberSkill = member.getSkills().stream()
-                .filter(ms -> ms.getSkillId() == taskSkill.getSkillId())
+                .filter(ms -> ms.getSkill().equals(taskSkill.getSkill()))
                 .findFirst();
             
             if (memberSkill.isPresent()) {
@@ -365,73 +306,55 @@ public class TaskAllocationService {
                     matchedSkills++;
                     totalSkillLevel += proficiency;
                 } else {
-                    // Has skill but not sufficient level
                     return 0;
                 }
             } else {
-                // Missing required skill
                 return 0;
             }
         }
         
         if (requiredSkills.size() == matchedSkills) {
-            // All skills matched, score based on proficiency level
             return Math.min(1.0, (double) totalSkillLevel / maxSkillLevel);
         }
         
         return 0;
     }
 
-    /**
-     * Calculate availability score (0-1)
-     */
     private double calculateAvailabilityScore(Task task, Member member) {
         double availableHours = member.getAvailableHours();
         double requiredHours = task.getEstimatedHours();
         
         if (availableHours < requiredHours) {
-            return 0; // Not enough availability
+            return 0;
         }
         
-        // Score higher for members with just enough time (better balance)
-        // but don't penalize too much for having more availability
         double ratio = requiredHours / availableHours;
         
         if (ratio >= 0.5) {
-            return 1.0; // Optimal use of time
+            return 1.0;
         } else {
-            return 0.5 + ratio; // Still good but not optimal
+            return 0.5 + ratio;
         }
     }
 
-    /**
-     * Calculate workload balance score (0-1)
-     * Higher score for less loaded members
-     */
     private double calculateWorkloadScore(Member member) {
         double workloadPercentage = member.getWorkloadPercentage();
         
         if (workloadPercentage >= 100) {
-            return 0; // Already at or over capacity
+            return 0;
         }
         
-        // Linear decrease from 1.0 (0% loaded) to 0.1 (100% loaded)
         return 1.0 - (workloadPercentage / 100.0 * 0.9);
     }
 
-    /**
-     * Sort tasks by priority and deadline
-     */
     private List<Task> prioritizeTasks(List<Task> tasks) {
         return tasks.stream()
             .sorted((t1, t2) -> {
-                // First by priority
                 int priorityCompare = Integer.compare(t2.getPriorityScore(), t1.getPriorityScore());
                 if (priorityCompare != 0) {
                     return priorityCompare;
                 }
                 
-                // Then by deadline
                 if (t1.getDeadline() != null && t2.getDeadline() != null) {
                     return t1.getDeadline().compareTo(t2.getDeadline());
                 }
@@ -441,18 +364,25 @@ public class TaskAllocationService {
             .collect(Collectors.toList());
     }
 
-    /**
-     * Assign a task to a member
-     */
     private void assignTaskToMember(Task task, Member member) throws SQLException {
         taskDAO.assignTask(task.getId(), member.getId());
-        task.setAssignedMemberId(member.getId());
-        task.setAssignedMemberName(member.getName());
+        
+        if (task.getAssignedMember() == null) {
+            task.setAssignedMember(new Member());
+        }
+        task.getAssignedMember().setId(member.getId());
+        task.getAssignedMember().setName(member.getName());
+    }
+    
+    public void checkAndCreateOverloadAlert(int memberId, int taskId) throws SQLException {
+        Member member = memberDAO.findById(memberId);
+        Task task = taskDAO.findById(taskId);
+        
+        if (member != null && task != null && member.isOverloaded()) {
+            createOverloadAlert(member, task);
+        }
     }
 
-    /**
-     * Create alert for member overload
-     */
     private void createOverloadAlert(Member member, Task task) throws SQLException {
         Alert alert = new Alert();
         alert.setType(Alert.AlertType.OVERLOAD);
@@ -463,15 +393,20 @@ public class TaskAllocationService {
             member.getName(), member.getCurrentWorkload(), 
             member.getWorkloadPercentage(), task.getTitle()
         ));
-        alert.setMemberId(member.getId());
-        alert.setTaskId(task.getId());
+        
+        Member alertMember = new Member();
+        alertMember.setId(member.getId());
+        alertMember.setName(member.getName());
+        alert.setMember(alertMember);
+        
+        Task alertTask = new Task();
+        alertTask.setId(task.getId());
+        alertTask.setTitle(task.getTitle());
+        alert.setTask(alertTask);
         
         alertDAO.create(alert);
     }
 
-    /**
-     * Create alert when no suitable member found
-     */
     private void createNoSuitableMemberAlert(Task task, int projectId) throws SQLException {
         Alert alert = new Alert();
         alert.setType(Alert.AlertType.CONFLICT);
@@ -482,15 +417,19 @@ public class TaskAllocationService {
             "Required skills may not be available or all members are at capacity.",
             task.getTitle()
         ));
-        alert.setProjectId(projectId);
-        alert.setTaskId(task.getId());
+        
+        Project alertProject = new Project();
+        alertProject.setId(projectId);
+        alert.setProject(alertProject);
+        
+        Task alertTask = new Task();
+        alertTask.setId(task.getId());
+        alertTask.setTitle(task.getTitle());
+        alert.setTask(alertTask);
         
         alertDAO.create(alert);
     }
 
-    /**
-     * Result object for allocation operation
-     */
     public static class AllocationResult {
         private final int assignedCount;
         private final int failedCount;
@@ -516,6 +455,30 @@ public class TaskAllocationService {
 
         public boolean isSuccess() {
             return failedCount == 0;
+        }
+    }
+    
+    private void checkExistingOverloads(int projectId) throws SQLException {
+        List<Member> allMembers = memberDAO.findAll();
+        List<Task> projectTasks = taskDAO.findByProjectAndStatus(projectId, Task.TaskStatus.TODO);
+        
+        projectTasks.addAll(taskDAO.findByProjectAndStatus(projectId, Task.TaskStatus.IN_PROGRESS));
+        
+        for (Member member : allMembers) {
+            if (member.isOverloaded()) {
+                Task lastTask = null;
+                for (Task task : projectTasks) {
+                    if (task.getAssignedMember() != null && task.getAssignedMember().getId() == member.getId()) {
+                        lastTask = task;
+                    }
+                }
+                
+                if (lastTask != null) {
+                    logger.info("Creating overload alert for existing overloaded member: {} ({}%)", 
+                        member.getName(), String.format("%.1f", member.getWorkloadPercentage()));
+                    createOverloadAlert(member, lastTask);
+                }
+            }
         }
     }
 }

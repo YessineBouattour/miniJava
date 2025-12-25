@@ -178,6 +178,34 @@
         </div>
     </div>
 
+    <!-- Edit Member Modal -->
+    <div id="editMemberModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('editMemberModal')">&times;</span>
+            <h2>Edit Team Member</h2>
+            <form id="editMemberForm" onsubmit="updateMember(event)">
+                <input type="hidden" name="memberId" id="editMemberId">
+                <div class="form-group">
+                    <label>Name</label>
+                    <input type="text" name="name" id="editMemberName" required>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" name="email" id="editMemberEmail" required>
+                </div>
+                <div class="form-group">
+                    <label>Weekly Availability (hours)</label>
+                    <input type="number" name="weeklyAvailability" id="editMemberAvailability" min="1" max="168" required>
+                </div>
+                <div class="form-group">
+                    <label>Skills</label>
+                    <div id="editSkillsCheckboxes" class="checkbox-group"></div>
+                </div>
+                <button type="submit" class="btn btn-primary">Update Member</button>
+            </form>
+        </div>
+    </div>
+
     <!-- Add Project Modal -->
     <div id="addProjectModal" class="modal">
         <div class="modal-content">

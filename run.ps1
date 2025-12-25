@@ -6,6 +6,7 @@ Write-Host "  Compilation et Démarrage" -ForegroundColor Cyan
 Write-Host "======================================" -ForegroundColor Cyan
 Write-Host ""
 
+# Toujours se placer dans le dossier du script
 Set-Location $PSScriptRoot
 
 # Créer le dossier lib
@@ -49,21 +50,21 @@ if (Test-Path "bin") {
 }
 New-Item -ItemType Directory -Path "bin" | Out-Null
 
-# Trouver tous les fichiers Java (exclure les servlets)
+# Trouver tous les fichiers Java
 $javaFiles = Get-ChildItem -Path "src\main\java" -Filter "*.java" -Recurse | 
-    Where-Object { $_.FullName -notlike "*\servlet\*" -and $_.FullName -notlike "*\filter\*" } | 
     Select-Object -ExpandProperty FullName
 
 # Créer un fichier temporaire avec la liste des sources
 $javaFiles | Out-File -FilePath "sources.txt" -Encoding ASCII
 
 # Compiler
-javac -encoding UTF-8 -d bin -cp "lib\*" "@sources.txt" 2>&1
+$compileOutput = javac -encoding UTF-8 -d bin -cp "lib\*" "@sources.txt" 2>&1
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host ""
     Write-Host "ERREUR: La compilation a échoué" -ForegroundColor Red
-    Remove-Item "sources.txt" -Force
+    Write-Host $compileOutput -ForegroundColor Red
+    Remove-Item "sources.txt" -Force -ErrorAction SilentlyContinue
     pause
     exit 1
 }
@@ -75,5 +76,10 @@ Write-Host ""
 Write-Host "[3/3] Démarrage du serveur..." -ForegroundColor Yellow
 Write-Host ""
 
+# Construire les chemins absolus pour éviter les problèmes
+$binPath = Join-Path $PSScriptRoot "bin"
+$libPath = Join-Path $PSScriptRoot "lib\*"
+$classPath = "$binPath;$libPath"
+
 # Lancer le serveur
-java -cp "bin;lib\*" com.projectmanagement.SimpleServer
+java -cp $classPath com.projectmanagement.SimpleServer

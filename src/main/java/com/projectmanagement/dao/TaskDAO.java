@@ -2,6 +2,8 @@ package com.projectmanagement.dao;
 
 import com.projectmanagement.model.Task;
 import com.projectmanagement.model.TaskSkill;
+import com.projectmanagement.model.Skill;
+import com.projectmanagement.model.Member;
 import com.projectmanagement.util.DatabaseUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,8 +30,8 @@ public class TaskDAO {
             stmt.setString(6, task.getStatus().name());
             stmt.setDate(7, task.getStartDate());
             stmt.setDate(8, task.getDeadline());
-            if (task.getAssignedMemberId() != null) {
-                stmt.setInt(9, task.getAssignedMemberId());
+            if (task.getAssignedMember() != null) {
+                stmt.setInt(9, task.getAssignedMember().getId());
             } else {
                 stmt.setNull(9, Types.INTEGER);
             }
@@ -178,8 +180,8 @@ public class TaskDAO {
             stmt.setString(5, task.getStatus().name());
             stmt.setDate(6, task.getStartDate());
             stmt.setDate(7, task.getDeadline());
-            if (task.getAssignedMemberId() != null) {
-                stmt.setInt(8, task.getAssignedMemberId());
+            if (task.getAssignedMember() != null) {
+                stmt.setInt(8, task.getAssignedMember().getId());
             } else {
                 stmt.setNull(8, Types.INTEGER);
             }
@@ -191,14 +193,13 @@ public class TaskDAO {
     }
 
     public void assignTask(int taskId, int memberId) throws SQLException {
-        String sql = "UPDATE tasks SET assigned_member_id = ?, status = ? WHERE id = ?";
+        String sql = "UPDATE tasks SET assigned_member_id = ? WHERE id = ?";
         
         try (Connection conn = DatabaseUtil.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             
             stmt.setInt(1, memberId);
-            stmt.setString(2, Task.TaskStatus.TODO.name());
-            stmt.setInt(3, taskId);
+            stmt.setInt(2, taskId);
             stmt.executeUpdate();
             logger.info("Assigned task {} to member {}", taskId, memberId);
         }
@@ -490,10 +491,19 @@ public class TaskDAO {
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     TaskSkill skill = new TaskSkill();
-                    skill.setTaskId(rs.getInt("task_id"));
-                    skill.setSkillId(rs.getInt("skill_id"));
+                    
+                    // Initialiser l'objet Task
+                    Task task = new Task();
+                    task.setId(rs.getInt("task_id"));
+                    skill.setTask(task);
+                    
+                    // Initialiser l'objet Skill
+                    Skill skillObj = new Skill();
+                    skillObj.setId(rs.getInt("skill_id"));
+                    skillObj.setName(rs.getString("skill_name"));
+                    skill.setSkill(skillObj);
+                    
                     skill.setRequiredLevel(rs.getInt("required_level"));
-                    skill.setSkillName(rs.getString("skill_name"));
                     skills.add(skill);
                 }
             }
@@ -532,12 +542,15 @@ public class TaskDAO {
         
         int assignedMemberId = rs.getInt("assigned_member_id");
         if (!rs.wasNull()) {
-            task.setAssignedMemberId(assignedMemberId);
-            task.setAssignedMemberName(rs.getString("member_name"));
+            // Initialiser l'objet Member
+            Member assignedMember = new Member();
+            assignedMember.setId(assignedMemberId);
+            assignedMember.setName(rs.getString("member_name"));
+            task.setAssignedMember(assignedMember);
         }
         
-        task.setCreatedAt(rs.getTimestamp("created_at"));
-        task.setUpdatedAt(rs.getTimestamp("updated_at"));
+        // task.setCreatedAt(rs.getTimestamp("created_at"));
+        // task.setUpdatedAt(rs.getTimestamp("updated_at"));
         return task;
     }
 }

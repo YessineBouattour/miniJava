@@ -172,6 +172,11 @@ public class SimpleServer {
                     int taskId = getId(exchange);
                     int memberId = ((Double)data.get("memberId")).intValue();
                     dao.assignTaskToMember(taskId, memberId);
+                    
+                    // Vérifier si l'assignation a causé une surcharge et créer une alerte si nécessaire
+                    TaskAllocationService allocationService = new TaskAllocationService();
+                    allocationService.checkAndCreateOverloadAlert(memberId, taskId);
+                    
                     response = "{\"success\":true,\"message\":\"Task assigned successfully\"}";
                 }
                 // DELETE /api/tasks/{taskId}/assign - Unassign task (only if TODO)

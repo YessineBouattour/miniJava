@@ -1,7 +1,7 @@
 package com.projectmanagement.model;
 
 import java.sql.Date;
-import java.sql.Timestamp;
+// import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -11,17 +11,18 @@ public class Task {
     private int projectId;
     private String title;
     private String description;
-    private double estimatedHours;
+    private double estimatedHours; //durée
     private Priority priority;
     private TaskStatus status;
     private Date startDate;
     private Date deadline;
-    private Integer assignedMemberId;
-    private String assignedMemberName;
+    // private Integer assignedMemberId;
+    // private String assignedMemberName; // on peut trouver le nom via une jointure
+    private Member assignedMember;
     private List<TaskSkill> requiredSkills;
     private List<Integer> dependencies; // IDs of tasks this depends on
-    private Timestamp createdAt;
-    private Timestamp updatedAt;
+    // private Timestamp createdAt;
+    // private Timestamp updatedAt;
 
     public enum Priority {
         LOW, MEDIUM, HIGH, URGENT
@@ -118,20 +119,36 @@ public class Task {
         this.deadline = deadline;
     }
 
+    // public Integer getAssignedMemberId() {
+    //     return assignedMemberId;
+    // }
+
+    // public void setAssignedMemberId(Integer assignedMemberId) {
+    //     this.assignedMemberId = assignedMemberId;
+    // }
+
+    // public String getAssignedMemberName() {
+    //     return assignedMemberName;
+    // }
+
+    // public void setAssignedMemberName(String assignedMemberName) {
+    //     this.assignedMemberName = assignedMemberName;
+    // }
+    public Member getAssignedMember() {
+        return assignedMember;
+    }
+
+    public void setAssignedMember(Member assignedMember) {
+        this.assignedMember = assignedMember;
+    }
+    
+    // Getters pour la compatibilité avec l'ancien format JSON
     public Integer getAssignedMemberId() {
-        return assignedMemberId;
+        return (assignedMember != null && assignedMember.getId() > 0) ? assignedMember.getId() : null;
     }
-
-    public void setAssignedMemberId(Integer assignedMemberId) {
-        this.assignedMemberId = assignedMemberId;
-    }
-
+    
     public String getAssignedMemberName() {
-        return assignedMemberName;
-    }
-
-    public void setAssignedMemberName(String assignedMemberName) {
-        this.assignedMemberName = assignedMemberName;
+        return (assignedMember != null && assignedMember.getName() != null) ? assignedMember.getName() : null;
     }
 
     public List<TaskSkill> getRequiredSkills() {
@@ -150,25 +167,25 @@ public class Task {
         this.dependencies = dependencies;
     }
 
-    public Timestamp getCreatedAt() {
-        return createdAt;
-    }
+    // public Timestamp getCreatedAt() {
+    //     return createdAt;
+    // }
 
-    public void setCreatedAt(Timestamp createdAt) {
-        this.createdAt = createdAt;
-    }
+    // public void setCreatedAt(Timestamp createdAt) {
+    //     this.createdAt = createdAt;
+    // }
 
-    public Timestamp getUpdatedAt() {
-        return updatedAt;
-    }
+    // public Timestamp getUpdatedAt() {
+    //     return updatedAt;
+    // }
 
-    public void setUpdatedAt(Timestamp updatedAt) {
-        this.updatedAt = updatedAt;
-    }
+    // public void setUpdatedAt(Timestamp updatedAt) {
+    //     this.updatedAt = updatedAt;
+    // }
 
     // Business methods
     public boolean isAssigned() {
-        return assignedMemberId != null;
+        return assignedMember != null;
     }
 
     public boolean hasDependencies() {
@@ -206,7 +223,7 @@ public class Task {
                 ", priority=" + priority +
                 ", status=" + status +
                 ", estimatedHours=" + estimatedHours +
-                ", assignedTo=" + assignedMemberName +
+                ", assignedTo=" + assignedMember.getName() +
                 '}';
     }
 }

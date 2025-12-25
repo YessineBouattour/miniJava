@@ -1,4 +1,3 @@
-// Timeline Visualization Module
 class TimelineVisualizer {
     constructor(containerId) {
         this.container = document.getElementById(containerId);
@@ -13,23 +12,23 @@ class TimelineVisualizer {
         this.startDate = new Date(project.startDate);
         this.endDate = new Date(project.deadline);
         
-        // Group tasks by member
         this.members.clear();
         tasks.forEach(task => {
-            if (task.assignedMemberId) {
-                if (!this.members.has(task.assignedMemberId)) {
-                    this.members.set(task.assignedMemberId, {
-                        id: task.assignedMemberId,
-                        name: task.assignedMemberName,
+            if (task.assignedMember && task.assignedMember.id) {
+                const memberId = task.assignedMember.id;
+                if (!this.members.has(memberId)) {
+                    this.members.set(memberId, {
+                        id: memberId,
+                        name: task.assignedMember.name,
                         tasks: []
                     });
                 }
-                this.members.get(task.assignedMemberId).tasks.push(task);
+                this.members.get(memberId).tasks.push(task);
             }
         });
         
         // Add unassigned tasks
-        const unassignedTasks = tasks.filter(t => !t.assignedMemberId);
+        const unassignedTasks = tasks.filter(t => !t.assignedMember || !t.assignedMember.id);
         if (unassignedTasks.length > 0) {
             this.members.set(0, {
                 id: 0,
@@ -49,7 +48,6 @@ class TimelineVisualizer {
         
         let html = '<div class="timeline-content">';
         
-        // Timeline header with dates
         html += '<div class="timeline-header">';
         html += `<div class="timeline-label">Team Member</div>`;
         html += '<div class="timeline-dates">';
@@ -58,7 +56,6 @@ class TimelineVisualizer {
         html += '</div>';
         html += '</div>';
         
-        // Render each member's timeline
         this.members.forEach((member, memberId) => {
             html += this.renderMemberTimeline(member, totalDays);
         });
@@ -73,20 +70,19 @@ class TimelineVisualizer {
         html += '<div class="timeline-bars">';
         
         member.tasks.forEach(task => {
-            if (task.startDate && task.deadline) {
-                const taskStart = new Date(task.startDate);
+            if (task.deadline) {
+                const taskStart = task.startDate ? new Date(task.startDate) : this.startDate;
                 const taskEnd = new Date(task.deadline);
                 
                 const startOffset = Math.max(0, (taskStart - this.startDate) / (1000 * 60 * 60 * 24));
                 const duration = (taskEnd - taskStart) / (1000 * 60 * 60 * 24);
                 
                 const leftPercent = (startOffset / totalDays) * 100;
-                const widthPercent = (duration / totalDays) * 100;
+                const widthPercent = Math.max(1, (duration / totalDays) * 100);
                 
-                html += `<div class="timeline-bar ${task.status}" 
+                html += `<div class="timeline-bar ${task.status.toLowerCase()}" 
                     style="left: ${leftPercent}%; width: ${widthPercent}%;"
-                    title="${task.title} (${task.estimatedHours}h)"
-                    onclick="showTaskDetails(${task.id})">
+                    title="${task.title}\nDuration: ${task.estimatedHours}h\nStatus: ${task.status}\nDeadline: ${taskEnd.toLocaleDateString()}">
                     <span>${task.title}</span>
                 </div>`;
             }
@@ -103,15 +99,12 @@ class TimelineVisualizer {
     }
 }
 
-// Global timeline instance
 let timelineVisualizer = null;
 
-// Initialize timeline
 function initTimeline() {
     timelineVisualizer = new TimelineVisualizer('timelineContainer');
 }
 
-// Load timeline for selected project
 async function loadTimeline() {
     const select = document.getElementById('timelineProjectSelect');
     const projectId = parseInt(select.value);
@@ -138,7 +131,6 @@ async function loadTimeline() {
     }
 }
 
-// Populate timeline project selector
 async function populateTimelineProjectSelect() {
     try {
         const projects = await ProjectsAPI.getAll();

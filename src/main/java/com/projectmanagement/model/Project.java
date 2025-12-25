@@ -1,7 +1,7 @@
 package com.projectmanagement.model;
 
 import java.sql.Date;
-import java.sql.Timestamp;
+// import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -14,8 +14,8 @@ public class Project {
     private Date deadline;
     private ProjectStatus status;
     private List<Task> tasks;
-    private Timestamp createdAt;
-    private Timestamp updatedAt;
+    // private Timestamp createdAt;
+    // private Timestamp updatedAt;
 
     public enum ProjectStatus {
         PLANNING, IN_PROGRESS, COMPLETED, CANCELLED
@@ -91,21 +91,21 @@ public class Project {
         this.tasks = tasks;
     }
 
-    public Timestamp getCreatedAt() {
-        return createdAt;
-    }
+    // public Timestamp getCreatedAt() {
+    //     return createdAt;
+    // }
 
-    public void setCreatedAt(Timestamp createdAt) {
-        this.createdAt = createdAt;
-    }
+    // public void setCreatedAt(Timestamp createdAt) {
+    //     this.createdAt = createdAt;
+    // }
 
-    public Timestamp getUpdatedAt() {
-        return updatedAt;
-    }
+    // public Timestamp getUpdatedAt() {
+    //     return updatedAt;
+    // }
 
-    public void setUpdatedAt(Timestamp updatedAt) {
-        this.updatedAt = updatedAt;
-    }
+    // public void setUpdatedAt(Timestamp updatedAt) {
+    //     this.updatedAt = updatedAt;
+    // }
 
     // Business methods
     public int getTotalTasks() {

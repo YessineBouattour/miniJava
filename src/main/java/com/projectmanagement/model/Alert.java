@@ -9,12 +9,15 @@ public class Alert {
     private Severity severity;
     private String title;
     private String message;
-    private Integer memberId;
-    private String memberName;
-    private Integer projectId;
-    private String projectName;
-    private Integer taskId;
-    private String taskTitle;
+    // private Integer memberId;
+    // private String memberName;
+    private Member member;
+    // private Integer projectId;
+    // private String projectName;
+    private Project project;
+    // private Integer taskId;
+    // private String taskTitle;
+    private Task task;
     private boolean isRead;
     private Timestamp createdAt;
 
@@ -79,52 +82,76 @@ public class Alert {
         this.message = message;
     }
 
-    public Integer getMemberId() {
-        return memberId;
+    // public Integer getMemberId() {
+    //     return memberId;
+    // }
+
+    // public void setMemberId(Integer memberId) {
+    //     this.memberId = memberId;
+    // }
+
+    // public String getMemberName() {
+    //     return memberName;
+    // }
+
+    // public void setMemberName(String memberName) {
+    //     this.memberName = memberName;
+    // }
+
+    public Member getMember() {
+        return member;
     }
 
-    public void setMemberId(Integer memberId) {
-        this.memberId = memberId;
+    public void setMember(Member member) {
+        this.member = member;
     }
 
-    public String getMemberName() {
-        return memberName;
+    // public Integer getProjectId() {
+    //     return projectId;
+    // }
+
+    // public void setProjectId(Integer projectId) {
+    //     this.projectId = projectId;
+    // }
+
+    // public String getProjectName() {
+    //     return projectName;
+    // }
+
+    // public void setProjectName(String projectName) {
+    //     this.projectName = projectName;
+    // }
+
+    public Project getProject() {
+        return project;
     }
 
-    public void setMemberName(String memberName) {
-        this.memberName = memberName;
+    public void setProject(Project project) {
+        this.project = project;
     }
 
-    public Integer getProjectId() {
-        return projectId;
+    // public Integer getTaskId() {
+    //     return taskId;
+    // }
+
+    // public void setTaskId(Integer taskId) {
+    //     this.taskId = taskId;
+    // }
+
+    // public String getTaskTitle() {
+    //     return taskTitle;
+    // }
+
+    // public void setTaskTitle(String taskTitle) {
+    //     this.taskTitle = taskTitle;
+    // }
+
+    public Task getTask() {
+        return task;
     }
 
-    public void setProjectId(Integer projectId) {
-        this.projectId = projectId;
-    }
-
-    public String getProjectName() {
-        return projectName;
-    }
-
-    public void setProjectName(String projectName) {
-        this.projectName = projectName;
-    }
-
-    public Integer getTaskId() {
-        return taskId;
-    }
-
-    public void setTaskId(Integer taskId) {
-        this.taskId = taskId;
-    }
-
-    public String getTaskTitle() {
-        return taskTitle;
-    }
-
-    public void setTaskTitle(String taskTitle) {
-        this.taskTitle = taskTitle;
+    public void setTask(Task task) {
+        this.task = task;
     }
 
     public boolean isRead() {

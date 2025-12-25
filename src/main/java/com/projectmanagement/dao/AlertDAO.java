@@ -23,9 +23,12 @@ public class AlertDAO {
             stmt.setString(2, alert.getSeverity().name());
             stmt.setString(3, alert.getTitle());
             stmt.setString(4, alert.getMessage());
-            setIntOrNull(stmt, 5, alert.getMemberId());
-            setIntOrNull(stmt, 6, alert.getProjectId());
-            setIntOrNull(stmt, 7, alert.getTaskId());
+            // setIntOrNull(stmt, 5, alert.getMemberId());
+            setIntOrNull(stmt, 5, alert.getMember() != null ? alert.getMember().getId() : null);
+            // setIntOrNull(stmt, 6, alert.getProjectId());
+            setIntOrNull(stmt, 6, alert.getProject() != null ? alert.getProject().getId() : null);
+            // setIntOrNull(stmt, 7, alert.getTaskId());
+            setIntOrNull(stmt, 7, alert.getTask() != null ? alert.getTask().getId() : null);
             stmt.setBoolean(8, alert.isRead());
             
             int affectedRows = stmt.executeUpdate();
@@ -200,20 +203,26 @@ public class AlertDAO {
         
         int memberId = rs.getInt("member_id");
         if (!rs.wasNull()) {
-            alert.setMemberId(memberId);
-            alert.setMemberName(rs.getString("member_name"));
+            com.projectmanagement.model.Member member = new com.projectmanagement.model.Member();
+            member.setId(memberId);
+            member.setName(rs.getString("member_name"));
+            alert.setMember(member);
         }
         
         int projectId = rs.getInt("project_id");
         if (!rs.wasNull()) {
-            alert.setProjectId(projectId);
-            alert.setProjectName(rs.getString("project_name"));
+            com.projectmanagement.model.Project project = new com.projectmanagement.model.Project();
+            project.setId(projectId);
+            project.setName(rs.getString("project_name"));
+            alert.setProject(project);
         }
         
         int taskId = rs.getInt("task_id");
         if (!rs.wasNull()) {
-            alert.setTaskId(taskId);
-            alert.setTaskTitle(rs.getString("task_title"));
+            com.projectmanagement.model.Task task = new com.projectmanagement.model.Task();
+            task.setId(taskId);
+            task.setTitle(rs.getString("task_title"));
+            alert.setTask(task);
         }
         
         alert.setRead(rs.getBoolean("is_read"));

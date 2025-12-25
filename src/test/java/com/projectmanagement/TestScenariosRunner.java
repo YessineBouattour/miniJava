@@ -196,12 +196,12 @@ public class TestScenariosRunner {
             List<Task> tasks = taskDAO.findByProject(1);
             for (Task task : tasks) {
                 if (task.isAssigned()) {
-                    Member member = memberDAO.findById(task.getAssignedMemberId());
+                    Member member = memberDAO.findById(task.getAssignedMember().getId());
                     assertNotNull(member, "Assigned member should exist");
                     
                     // Check if member has required skills
                     for (TaskSkill reqSkill : task.getRequiredSkills()) {
-                        boolean hasSkill = member.hasSkill(reqSkill.getSkillId(), reqSkill.getRequiredLevel());
+                        boolean hasSkill = member.hasSkill(reqSkill.getSkill(), reqSkill.getRequiredLevel());
                         assertTrue(hasSkill, 
                             "Member " + member.getName() + " should have required skill for task " + task.getTitle());
                     }
@@ -268,7 +268,8 @@ public class TestScenariosRunner {
         test("4.3 - Verify critical severity for high overload", () -> {
             List<Alert> alerts = alertDAO.findAll();
             Alert carolAlert = alerts.stream()
-                .filter(a -> a.getMemberId() != null && a.getMemberId() == 3)
+                // .filter(a -> a.getMemberId() != null && a.getMemberId() == 3)
+                .filter(a -> a.getMember() != null && a.getMember().getId() == 3)
                 .filter(a -> a.getType() == Alert.AlertType.OVERLOAD)
                 .findFirst()
                 .orElse(null);

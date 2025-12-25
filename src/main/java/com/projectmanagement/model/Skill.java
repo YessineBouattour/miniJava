@@ -1,13 +1,13 @@
 package com.projectmanagement.model;
 
-import java.sql.Timestamp;
+// import java.sql.Timestamp;
 import java.util.Objects;
 
 public class Skill {
     private int id;
     private String name;
     private String description;
-    private Timestamp createdAt;
+    // private Timestamp createdAt;
 
     public Skill() {
     }
@@ -42,13 +42,13 @@ public class Skill {
         this.description = description;
     }
 
-    public Timestamp getCreatedAt() {
-        return createdAt;
-    }
+    // public Timestamp getCreatedAt() {
+    //     return createdAt;
+    // }
 
-    public void setCreatedAt(Timestamp createdAt) {
-        this.createdAt = createdAt;
-    }
+    // public void setCreatedAt(Timestamp createdAt) {
+    //     this.createdAt = createdAt;
+    // }
 
     @Override
     public boolean equals(Object o) {

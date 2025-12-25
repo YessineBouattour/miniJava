@@ -2,6 +2,7 @@ package com.projectmanagement.dao;
 
 import com.projectmanagement.model.Member;
 import com.projectmanagement.model.MemberSkill;
+import com.projectmanagement.model.Skill;
 import com.projectmanagement.util.DatabaseUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -159,10 +160,19 @@ public class MemberDAO {
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     MemberSkill skill = new MemberSkill();
-                    skill.setMemberId(rs.getInt("member_id"));
-                    skill.setSkillId(rs.getInt("skill_id"));
+                    
+                    // Initialiser l'objet Member
+                    Member member = new Member();
+                    member.setId(rs.getInt("member_id"));
+                    skill.setMember(member);
+                    
+                    // Initialiser l'objet Skill
+                    Skill skillObj = new Skill();
+                    skillObj.setId(rs.getInt("skill_id"));
+                    skillObj.setName(rs.getString("skill_name"));
+                    skill.setSkill(skillObj);
+                    
                     skill.setProficiencyLevel(rs.getInt("proficiency_level"));
-                    skill.setSkillName(rs.getString("skill_name"));
                     skills.add(skill);
                 }
             }
@@ -220,8 +230,8 @@ public class MemberDAO {
         member.setEmail(rs.getString("email"));
         member.setWeeklyAvailability(rs.getInt("weekly_availability"));
         member.setCurrentWorkload(rs.getDouble("current_workload"));
-        member.setCreatedAt(rs.getTimestamp("created_at"));
-        member.setUpdatedAt(rs.getTimestamp("updated_at"));
+        // member.setCreatedAt(rs.getTimestamp("created_at"));
+        // member.setUpdatedAt(rs.getTimestamp("updated_at"));
         return member;
     }
 }

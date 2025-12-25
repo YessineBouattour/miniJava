@@ -21,7 +21,7 @@ public class StatisticsService {
     public StatisticsService() {
         this.memberDAO = new MemberDAO();
         this.projectDAO = new ProjectDAO();
-        this.taskDAO = new TaskDAO();
+        this.taskDAO = new TaskDAO(); 
     }
 
     public Map<String, Object> getProjectStatistics(int projectId) throws SQLException {
@@ -34,7 +34,6 @@ public class StatisticsService {
         
         List<Task> tasks = taskDAO.findByProject(projectId);
         
-        // Task statistics
         long totalTasks = tasks.size();
         long completedTasks = tasks.stream().filter(t -> t.getStatus() == Task.TaskStatus.COMPLETED).count();
         long inProgressTasks = tasks.stream().filter(t -> t.getStatus() == Task.TaskStatus.IN_PROGRESS).count();
@@ -48,7 +47,6 @@ public class StatisticsService {
         stats.put("blockedTasks", blockedTasks);
         stats.put("completionPercentage", totalTasks > 0 ? (completedTasks * 100.0 / totalTasks) : 0);
         
-        // Hours statistics
         double totalEstimatedHours = tasks.stream().mapToDouble(Task::getEstimatedHours).sum();
         double completedHours = tasks.stream()
             .filter(t -> t.getStatus() == Task.TaskStatus.COMPLETED)
@@ -59,12 +57,10 @@ public class StatisticsService {
         stats.put("completedHours", completedHours);
         stats.put("remainingHours", totalEstimatedHours - completedHours);
         
-        // Priority distribution
         Map<String, Long> priorityDistribution = tasks.stream()
             .collect(Collectors.groupingBy(t -> t.getPriority().name(), Collectors.counting()));
         stats.put("priorityDistribution", priorityDistribution);
         
-        // Assignment statistics
         long assignedTasks = tasks.stream().filter(Task::isAssigned).count();
         long unassignedTasks = totalTasks - assignedTasks;
         
@@ -79,7 +75,6 @@ public class StatisticsService {
         
         List<Member> members = memberDAO.findAll();
         
-        // Calculate workload statistics
         double totalAvailability = members.stream()
             .mapToDouble(Member::getWeeklyAvailability)
             .sum();
@@ -104,7 +99,6 @@ public class StatisticsService {
         stats.put("overloadedMembers", overloadedMembers);
         stats.put("utilizationPercentage", totalAvailability > 0 ? (totalWorkload / totalAvailability * 100) : 0);
         
-        // Member workload details
         List<Map<String, Object>> memberWorkloads = members.stream()
             .map(member -> {
                 Map<String, Object> memberData = new HashMap<>();
@@ -141,12 +135,6 @@ public class StatisticsService {
         stats.put("totalProjects", projects.size());
         stats.put("totalMembers", members.size());
         
-        // Project status distribution
-        Map<String, Long> projectStatusDistribution = projects.stream()
-            .collect(Collectors.groupingBy(p -> p.getStatus().name(), Collectors.counting()));
-        stats.put("projectStatusDistribution", projectStatusDistribution);
-        
-        // Count tasks across all projects
         int totalTasks = 0;
         for (Project project : projects) {
             List<Task> tasks = taskDAO.findByProject(project.getId());

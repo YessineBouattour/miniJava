@@ -118,7 +118,7 @@ public class SkillDAO {
         skill.setId(rs.getInt("id"));
         skill.setName(rs.getString("name"));
         skill.setDescription(rs.getString("description"));
-        skill.setCreatedAt(rs.getTimestamp("created_at"));
+        // skill.setCreatedAt(rs.getTimestamp("created_at"));
         return skill;
     }
 }

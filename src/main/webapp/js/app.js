@@ -115,7 +115,7 @@ function displayRecentProjects(projects) {
         html += `
             <div class="task-item" onclick="viewProjectDetails(${project.id})">
                 <div class="task-info">
-                    <h4>${project.name}</h4>
+                    <h4>${project.name} <i class="fas fa-arrow-right" style="font-size: 0.8rem; color: #999; margin-left: 0.5rem;"></i></h4>
                     <p>${taskCount} task${taskCount !== 1 ? 's' : ''} • ${completion.toFixed(0)}% complete</p>
                 </div>
                 <span class="status-badge ${project.status.toLowerCase().replace('_', '-')}">${project.status}</span>
@@ -138,14 +138,30 @@ function displayWorkloadOverview(memberWorkloads) {
     let html = '';
     // Afficher TOUS les membres (pas seulement les 5 premiers)
     memberWorkloads.forEach(member => {
-        const percentage = member.workloadPercentage || 0;
-        const progressClass = percentage > 100 ? 'danger' : percentage > 80 ? 'warning' : '';
+        // Calculer le pourcentage si non fourni
+        let percentage = member.workloadPercentage || 0;
+        if (percentage === 0 && member.weeklyAvailability > 0) {
+            percentage = (member.currentWorkload / member.weeklyAvailability) * 100;
+        }
+        
+        let progressClass = '';
+        if (percentage > 100) {
+            progressClass = 'danger'; // Rouge - Surchargé
+        } else if (percentage >= 90) {
+            progressClass = 'warning'; // Orange - Presque surchargé
+        } else if (percentage >= 75) {
+            progressClass = 'high'; // Jaune - Charge élevée
+        } else if (percentage >= 50) {
+            progressClass = 'normal'; // Vert - Charge normale
+        } else {
+            progressClass = 'low'; // Bleu - Charge légère
+        }
         
         html += `
             <div class="workload-item">
                 <div class="workload-header">
                     <span>${member.name}</span>
-                    <span class="workload-percentage">${member.currentWorkload.toFixed(1)}h / ${member.weeklyAvailability}h</span>
+                    <span class="workload-percentage">${member.currentWorkload.toFixed(1)}h / ${member.weeklyAvailability}h (${percentage.toFixed(0)}%)</span>
                 </div>
                 <div class="progress-bar">
                     <div class="progress-fill ${progressClass}" style="width: ${Math.min(percentage, 100)}%"></div>
@@ -178,8 +194,24 @@ function displayMembers(members) {
     
     let html = '';
     members.forEach(member => {
-        const workloadPercentage = member.workloadPercentage || 0;
-        const progressClass = workloadPercentage > 100 ? 'danger' : workloadPercentage > 80 ? 'warning' : '';
+        // Calculer le pourcentage si non fourni par l'API
+        let workloadPercentage = member.workloadPercentage || 0;
+        if (workloadPercentage === 0 && member.weeklyAvailability > 0) {
+            workloadPercentage = (member.currentWorkload / member.weeklyAvailability) * 100;
+        }
+        
+        let progressClass = '';
+        if (workloadPercentage > 100) {
+            progressClass = 'danger'; // Rouge - Surchargé
+        } else if (workloadPercentage >= 90) {
+            progressClass = 'warning'; // Orange - Presque surchargé
+        } else if (workloadPercentage >= 75) {
+            progressClass = 'high'; // Jaune - Charge élevée
+        } else if (workloadPercentage >= 50) {
+            progressClass = 'normal'; // Vert - Charge normale
+        } else {
+            progressClass = 'low'; // Bleu - Charge légère
+        }
         const initials = member.name.split(' ').map(n => n[0]).join('').toUpperCase();
         
         html += `
@@ -194,14 +226,21 @@ function displayMembers(members) {
                 <div class="member-stats">
                     <div class="stat-row">
                         <span>Workload:</span>
-                        <span>${member.currentWorkload.toFixed(1)}h / ${member.weeklyAvailability}h</span>
+                        <span>${member.currentWorkload.toFixed(1)}h / ${member.weeklyAvailability}h (${workloadPercentage.toFixed(0)}%)</span>
                     </div>
                     <div class="progress-bar">
                         <div class="progress-fill ${progressClass}" style="width: ${Math.min(workloadPercentage, 100)}%"></div>
                     </div>
                 </div>
                 <div class="skills-tags">
-                    ${member.skills.map(skill => `<span class="skill-tag">${skill.skillName} (${skill.proficiencyLevel})</span>`).join('')}
+                    ${member.skills.map(skill => `<span class="skill-tag">${skill.skill ? skill.skill.name : 'Unknown'} (${skill.proficiencyLevel})</span>`).join('')}
+                </div>
+                <div class="member-actions">
+                    <button class="btn btn-secondary" onclick="showEditMemberModal(${member.id})">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                    <button class="btn btn-danger" onclick="deleteMember(${member.id}, '${member.name.replace(/'/g, "\\'")}')">                        <i class="fas fa-trash"></i> Delete
+                    </button>
                 </div>
             </div>
         `;
@@ -276,6 +315,121 @@ async function addMember(event) {
     } catch (error) {
         console.error('Error adding member:', error);
         showNotification('Error adding member: ' + error.message, 'error');
+    }
+}
+
+async function showEditMemberModal(memberId) {
+    try {
+        // Get all members and find the one we need
+        const members = await MembersAPI.getAll();
+        const member = members.find(m => m.id === memberId);
+        
+        if (!member) {
+            throw new Error('Member not found');
+        }
+        
+        document.getElementById('editMemberId').value = member.id;
+        document.getElementById('editMemberName').value = member.name;
+        document.getElementById('editMemberEmail').value = member.email;
+        document.getElementById('editMemberAvailability').value = member.weeklyAvailability;
+        
+        // Populate skills with current member skills selected
+        const container = document.getElementById('editSkillsCheckboxes');
+        let html = '';
+        
+        allSkills.forEach(skill => {
+            const memberSkill = member.skills.find(ms => ms.skill && ms.skill.id === skill.id);
+            const checked = memberSkill ? 'checked' : '';
+            const level = memberSkill ? memberSkill.proficiencyLevel : 3;
+            
+            html += `
+                <label>
+                    <input type="checkbox" name="skill_${skill.id}" value="${skill.id}" ${checked}>
+                    ${skill.name}
+                    <select name="level_${skill.id}" style="width: 60px; margin-left: 5px;">
+                        <option value="1" ${level === 1 ? 'selected' : ''}>1</option>
+                        <option value="2" ${level === 2 ? 'selected' : ''}>2</option>
+                        <option value="3" ${level === 3 ? 'selected' : ''}>3</option>
+                        <option value="4" ${level === 4 ? 'selected' : ''}>4</option>
+                        <option value="5" ${level === 5 ? 'selected' : ''}>5</option>
+                    </select>
+                </label>
+            `;
+        });
+        
+        container.innerHTML = html;
+        document.getElementById('editMemberModal').classList.add('active');
+    } catch (error) {
+        console.error('Error loading member:', error);
+        showNotification('Error loading member details', 'error');
+    }
+}
+
+async function updateMember(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const formData = new FormData(form);
+    const memberId = parseInt(formData.get('memberId'));
+    
+    const member = {
+        id: memberId,
+        name: formData.get('name'),
+        email: formData.get('email'),
+        weeklyAvailability: parseInt(formData.get('weeklyAvailability'))
+    };
+    
+    try {
+        await MembersAPI.update(member);
+        
+        // Update skills - first remove all, then add selected ones
+        const members = await MembersAPI.getAll();
+        const currentMember = members.find(m => m.id === memberId);
+        
+        if (currentMember) {
+            for (const ms of currentMember.skills) {
+                await MembersAPI.removeSkill(memberId, ms.skill.id);
+            }
+        }
+        
+        // Add selected skills
+        for (const skill of allSkills) {
+            const checkbox = form.querySelector(`input[name="skill_${skill.id}"]`);
+            if (checkbox && checkbox.checked) {
+                const level = parseInt(form.querySelector(`select[name="level_${skill.id}"]`).value);
+                await MembersAPI.addSkill(memberId, skill.id, level);
+            }
+        }
+        
+        closeModal('editMemberModal');
+        showNotification('Member updated successfully!', 'success');
+        loadMembers();
+        
+        if (currentPage === 'dashboard') {
+            loadDashboard();
+        }
+    } catch (error) {
+        console.error('Error updating member:', error);
+        showNotification('Error updating member: ' + error.message, 'error');
+    }
+}
+
+async function deleteMember(memberId, memberName) {
+    if (!confirm(`Are you sure you want to delete ${memberName}? This action cannot be undone.`)) {
+        return;
+    }
+    
+    try {
+        await MembersAPI.delete(memberId);
+        showNotification('Member deleted successfully!', 'success');
+        loadMembers();
+        
+        if (currentPage === 'dashboard') {
+            loadDashboard();
+        }
+    } catch (error) {
+        console.error('Error deleting member:', error);
+        showNotification('Error deleting member: ' + error.message, 'error');
     }
 }
 
@@ -442,7 +596,7 @@ function displayProjectDetails(project, tasks, stats) {
         tasks.forEach(task => {
             // Boutons de changement de statut
             let statusButtons = '';
-            if (task.status === 'TODO' && task.assignedMemberId) {
+            if (task.status === 'TODO' && task.assignedMember && task.assignedMember.id) {
                 statusButtons = `<button class="btn btn-small btn-primary" onclick="startTask(${task.id}, ${project.id})" title="Commencer la tâche">
                     <i class="fas fa-play"></i> Commencer
                 </button>`;
@@ -456,9 +610,9 @@ function displayProjectDetails(project, tasks, stats) {
                 </span>`;
             }
             
-            // Bouton d'assignation manuelle (uniquement si pas assignée)
+            // Bouton d'assignation manuelle (uniquement si TODO et pas assignée)
             let assignButton = '';
-            if (!task.assignedMemberId) {
+            if (task.status === 'TODO' && (!task.assignedMember || !task.assignedMember.id)) {
                 assignButton = `<button class="btn btn-small btn-secondary" onclick="showAssignTaskModal(${task.id}, ${project.id})" title="Assigner manuellement">
                     <i class="fas fa-user-plus"></i> Assigner
                 </button>`;
@@ -466,7 +620,7 @@ function displayProjectDetails(project, tasks, stats) {
             
             // Bouton de retrait d'assignation (uniquement si TODO et assignée)
             let unassignButton = '';
-            if (task.status === 'TODO' && task.assignedMemberId) {
+            if (task.status === 'TODO' && task.assignedMember && task.assignedMember.id) {
                 unassignButton = `<button class="btn btn-small btn-warning" onclick="unassignTask(${task.id}, ${project.id})" title="Retirer l'assignation">
                     <i class="fas fa-user-minus"></i> Retirer
                 </button>`;
@@ -478,7 +632,7 @@ function displayProjectDetails(project, tasks, stats) {
                         <h4>${task.title}</h4>
                         <p>
                             ${task.estimatedHours}h • 
-                            ${task.assignedMemberName || 'Unassigned'} • 
+                            ${(task.assignedMember && task.assignedMember.name) || 'Unassigned'} • 
                             <span class="priority-badge ${task.priority}">${task.priority}</span> • 
                             <span class="status-badge ${task.status.toLowerCase().replace('_', '-')}">${task.status}</span>
                         </p>
@@ -609,19 +763,19 @@ function displayAlerts(alerts) {
     
     let html = '';
     alerts.forEach(alert => {
-        const unreadClass = !alert.read ? 'unread' : '';
+        const unreadClass = !alert.isRead ? 'unread' : '';
         
         html += `
-            <div class="alert-item ${alert.type} ${unreadClass}">
+            <div class="alert-item ${alert.type.toLowerCase()} ${unreadClass}">
                 <div class="alert-content">
                     <h4>${alert.title}</h4>
                     <p>${alert.message}</p>
-                    ${alert.memberName ? `<p><strong>Member:</strong> ${alert.memberName}</p>` : ''}
-                    ${alert.projectName ? `<p><strong>Project:</strong> ${alert.projectName}</p>` : ''}
+                    ${alert.member && alert.member.name ? `<p><strong>Member:</strong> ${alert.member.name}</p>` : ''}
+                    ${alert.project && alert.project.name ? `<p><strong>Project:</strong> ${alert.project.name}</p>` : ''}
                     <div class="alert-time">${new Date(alert.createdAt).toLocaleString()}</div>
                 </div>
                 <div>
-                    ${!alert.read ? `<button class="btn btn-sm btn-secondary" onclick="markAlertRead(${alert.id})">Mark Read</button>` : ''}
+                    ${!alert.isRead ? `<button class="btn btn-sm btn-secondary" onclick="markAlertRead(${alert.id})">Mark Read</button>` : ''}
                     <button class="btn btn-sm btn-danger" onclick="deleteAlert(${alert.id})">Delete</button>
                 </div>
             </div>
@@ -662,14 +816,26 @@ async function deleteAlert(alertId) {
     }
 }
 
-// Statistics Functions
 async function loadStatistics() {
     try {
         const workloadStats = await StatisticsAPI.getWorkload();
         displayWorkloadStatistics(workloadStats);
         
         const projects = await ProjectsAPI.getAll();
-        displayProjectStatistics(projects);
+        
+        const projectsWithTasks = await Promise.all(
+            projects.map(async (project) => {
+                try {
+                    const tasks = await ProjectsAPI.getTasks(project.id);
+                    return { ...project, tasks };
+                } catch (error) {
+                    console.error(`Error loading tasks for project ${project.id}:`, error);
+                    return { ...project, tasks: [] };
+                }
+            })
+        );
+        
+        displayProjectStatistics(projectsWithTasks);
     } catch (error) {
         console.error('Error loading statistics:', error);
     }
@@ -742,7 +908,6 @@ function displayProjectStatistics(projects) {
     container.innerHTML = html;
 }
 
-// Fonctions pour gérer les changements de statut des tâches
 async function startTask(taskId, projectId) {
     if (!confirm('Voulez-vous commencer cette tâche ?')) {
         return;
@@ -750,12 +915,28 @@ async function startTask(taskId, projectId) {
     
     try {
         const task = await TasksAPI.getById(taskId);
-        task.status = 'IN_PROGRESS';
-        await TasksAPI.update(task);
+        
+        // Nettoyer l'objet pour l'update - ne garder que les champs simples
+        const cleanTask = {
+            id: task.id,
+            projectId: task.projectId,
+            title: task.title,
+            description: task.description,
+            estimatedHours: task.estimatedHours,
+            priority: task.priority,
+            status: 'IN_PROGRESS',
+            startDate: task.startDate,
+            deadline: task.deadline,
+            assignedMemberId: task.assignedMember ? task.assignedMember.id : null
+        };
+        
+        await TasksAPI.update(cleanTask);
+        
+        // Mettre à jour le statut du projet si nécessaire
+        await updateProjectStatus(projectId);
         
         showNotification('Tâche démarrée avec succès !', 'success');
         
-        // Rafraîchir l'affichage
         if (projectId) {
             viewProjectDetails(projectId);
         }
@@ -772,8 +953,25 @@ async function completeTask(taskId, projectId) {
     
     try {
         const task = await TasksAPI.getById(taskId);
-        task.status = 'COMPLETED';
-        await TasksAPI.update(task);
+        
+        // Nettoyer l'objet pour l'update - ne garder que les champs simples
+        const cleanTask = {
+            id: task.id,
+            projectId: task.projectId,
+            title: task.title,
+            description: task.description,
+            estimatedHours: task.estimatedHours,
+            priority: task.priority,
+            status: 'COMPLETED',
+            startDate: task.startDate,
+            deadline: task.deadline,
+            assignedMemberId: task.assignedMember ? task.assignedMember.id : null
+        };
+        
+        await TasksAPI.update(cleanTask);
+        
+        // Mettre à jour le statut du projet si nécessaire
+        await updateProjectStatus(projectId);
         
         showNotification('Tâche terminée ! Félicitations ! 🎉', 'success');
         
@@ -789,6 +987,67 @@ async function completeTask(taskId, projectId) {
     } catch (error) {
         console.error('Error completing task:', error);
         showNotification('Erreur lors de la complétion de la tâche: ' + error.message, 'error');
+    }
+}
+
+/**
+ * Met à jour automatiquement le statut du projet en fonction des tâches
+ */
+async function updateProjectStatus(projectId) {
+    try {
+        console.log(`Updating project ${projectId} status...`);
+        const project = await ProjectsAPI.getById(projectId);
+        const tasks = await ProjectsAPI.getTasks(projectId);
+        
+        console.log(`Project current status: ${project.status}`);
+        console.log(`Tasks: ${tasks.length} total`);
+        
+        if (tasks.length === 0) {
+            console.log('No tasks, skipping status update');
+            return; // Pas de tâches, pas de changement
+        }
+        
+        // Compter les tâches par statut
+        const completedCount = tasks.filter(t => t.status === 'COMPLETED').length;
+        const inProgressCount = tasks.filter(t => t.status === 'IN_PROGRESS').length;
+        const todoCount = tasks.filter(t => t.status === 'TODO').length;
+        
+        console.log(`Tasks breakdown: ${completedCount} COMPLETED, ${inProgressCount} IN_PROGRESS, ${todoCount} TODO`);
+        
+        let newStatus = project.status;
+        
+        // Déterminer le nouveau statut
+        if (completedCount === tasks.length) {
+            // Toutes les tâches sont terminées
+            newStatus = 'COMPLETED';
+            console.log('All tasks completed, setting project to COMPLETED');
+        } else if (inProgressCount > 0 || completedCount > 0) {
+            // Au moins une tâche en cours ou terminée
+            newStatus = 'IN_PROGRESS';
+            console.log('Some tasks in progress or completed, setting project to IN_PROGRESS');
+        } else {
+            console.log('All tasks are TODO, keeping project status as is');
+        }
+        
+        // Mettre à jour uniquement si le statut a changé
+        if (newStatus !== project.status) {
+            console.log(`Updating project status from ${project.status} to ${newStatus}`);
+            const updatedProject = {
+                id: project.id,
+                name: project.name,
+                description: project.description,
+                startDate: project.startDate,
+                deadline: project.deadline,
+                status: newStatus
+            };
+            
+            await ProjectsAPI.update(updatedProject);
+            console.log(`Project ${projectId} status successfully updated to ${newStatus}`);
+        } else {
+            console.log(`Project status unchanged (${project.status})`);
+        }
+    } catch (error) {
+        console.error('Error updating project status:', error);
     }
 }
 

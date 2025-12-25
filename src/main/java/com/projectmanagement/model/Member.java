@@ -1,6 +1,6 @@
 package com.projectmanagement.model;
 
-import java.sql.Timestamp;
+// import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -8,20 +8,22 @@ import java.util.Objects;
 public class Member {
     private int id;
     private String name;
+    private String prenom; //il faut l'ajouter
     private String email;
     private int weeklyAvailability; // hours per week
     private double currentWorkload; // current hours assigned
     private List<MemberSkill> skills;
-    private Timestamp createdAt;
-    private Timestamp updatedAt;
+    // private Timestamp createdAt;
+    // private Timestamp updatedAt;
 
     public Member() {
         this.skills = new ArrayList<>();
     }
 
-    public Member(String name, String email, int weeklyAvailability) {
+    public Member(String name, String prenom, String email, int weeklyAvailability) {
         this();
         this.name = name;
+        this.prenom = prenom;
         this.email = email;
         this.weeklyAvailability = weeklyAvailability;
         this.currentWorkload = 0.0;
@@ -42,6 +44,14 @@ public class Member {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getPrenom() {
+        return prenom;
+    }
+
+    public void setPrenom(String prenom) {
+        this.prenom = prenom;
     }
 
     public String getEmail() {
@@ -76,26 +86,26 @@ public class Member {
         this.skills = skills;
     }
 
-    public Timestamp getCreatedAt() {
-        return createdAt;
-    }
+    // public Timestamp getCreatedAt() {
+    //     return createdAt;
+    // }
 
-    public void setCreatedAt(Timestamp createdAt) {
-        this.createdAt = createdAt;
-    }
+    // public void setCreatedAt(Timestamp createdAt) {
+    //     this.createdAt = createdAt;
+    // }
 
-    public Timestamp getUpdatedAt() {
-        return updatedAt;
-    }
+    // public Timestamp getUpdatedAt() {
+    //     return updatedAt;
+    // }
 
-    public void setUpdatedAt(Timestamp updatedAt) {
-        this.updatedAt = updatedAt;
-    }
+    // public void setUpdatedAt(Timestamp updatedAt) {
+    //     this.updatedAt = updatedAt;
+    // }
 
     // Business methods
-    public boolean hasSkill(int skillId, int requiredLevel) {
+    public boolean hasSkill(Skill skill, int requiredLevel) {
         return skills.stream()
-                .anyMatch(ms -> ms.getSkillId() == skillId && ms.getProficiencyLevel() >= requiredLevel);
+                .anyMatch(ms -> ms.getSkill() == skill && ms.getProficiencyLevel() >= requiredLevel);
     }
 
     public double getAvailableHours() {
@@ -129,6 +139,7 @@ public class Member {
         return "Member{" +
                 "id=" + id +
                 ", name='" + name + '\'' +
+                ", prenom='" + prenom + '\'' +
                 ", email='" + email + '\'' +
                 ", weeklyAvailability=" + weeklyAvailability +
                 ", currentWorkload=" + currentWorkload +
